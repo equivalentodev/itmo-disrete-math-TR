@@ -1,0 +1,19 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+
+# В Git хранится только каркас рабочей области.
+/work/*
+!/work/README.md
+!/work/students/
+/work/students/*
+!/work/students/.gitkeep
+!/work/assignments/
+/work/assignments/*
+!/work/assignments/.gitkeep
+!/work/build/
+/work/build/*
+!/work/build/.gitkeep
+!/work/exports/
+/work/exports/*
+!/work/exports/.gitkeep

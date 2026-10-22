@@ -1,0 +1,11 @@
+**
+!Dockerfile
+!container_entrypoint.py
+!tool/
+!tool/**
+!tests/
+!tests/**
+!templates/
+!templates/**
+**/__pycache__/
+**/*.pyc

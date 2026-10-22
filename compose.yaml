@@ -1,0 +1,11 @@
+name: dm-homework
+
+services:
+  utility:
+    build: .
+    image: dm-homework-tool:local
+    working_dir: /project
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/project
