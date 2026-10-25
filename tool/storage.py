@@ -40,14 +40,14 @@ def atomic_json(path: Path, data: dict) -> None:
 
 
 @contextmanager
-def work_lock(work: Path):
+def work_lock(work: Path, *, label: str = 'work/.tool.lock'):
     work.mkdir(parents=True, exist_ok=True)
     path = work / '.tool.lock'
     try:
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     except FileExistsError as exc:
         raise ToolError(
-            'Другая операция уже использует work/.tool.lock. '
+            f'Другая операция уже использует {label}. '
             'Дождитесь её завершения. Если прошлый запуск аварийно оборвался, '
             'убедитесь, что он не работает, и удалите этот файл блокировки.'
         ) from exc

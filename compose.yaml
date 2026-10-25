@@ -1,11 +1,34 @@
 name: dm-homework
 
 services:
+  web:
+    build:
+      context: .
+      target: web
+    image: dm-homework-web:local
+    working_dir: /project
+    init: true
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      PREVIEW_CACHE_MB: ${PREVIEW_CACHE_MB:-1024}
+      BUILD_TIMEOUT_SECONDS: ${BUILD_TIMEOUT_SECONDS:-600}
+    volumes:
+      - ./TR:/project/TR
+      - ./work:/project/work
+      - ./templates:/project/templates:ro
+      - ./config:/project/config:ro
   utility:
-    build: .
+    profiles: ["cli"]
+    build:
+      context: .
+      target: app
     image: dm-homework-tool:local
     working_dir: /project
     stdin_open: true
     tty: true
     volumes:
-      - .:/project
+      - ./TR:/project/TR
+      - ./work:/project/work
+      - ./templates:/project/templates:ro
+      - ./config:/project/config:ro

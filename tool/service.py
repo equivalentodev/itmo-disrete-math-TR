@@ -24,6 +24,8 @@ class Result:
     students: int
     flows: dict[str, int]
     changes: tuple[str, ...]
+    pdfs: tuple[Path, ...] = ()
+    pdf_archive: Path | None = None
 
 
 def _verify_project(project: Path, documents: dict[str, str], bank, students) -> None:
@@ -84,19 +86,32 @@ def _assignments_csv(path: Path, records: dict, students, count: int) -> None:
 def run(
     root: Path, bank_name: str, *, kind: str = 'review', csv_path: Path | None = None,
     selection: str = 'all', values: tuple[str, ...] = (), seed: int | None = None,
+    pdf: bool = False, compiler=None, progress=None,
 ) -> Result:
     """kind: review / students / redistribute. Не обращается к терминальному вводу."""
     root = root.resolve()
     if kind not in ('review', 'students', 'redistribute'):
         raise ToolError(f'Неизвестное действие: {kind}.')
+    if type(pdf) is not bool or (pdf and kind == 'redistribute'):
+        raise ToolError('PDF можно собрать только для обзора или именных работ.')
+    if progress:
+        progress('Подготовка исходников…')
     settings = read_settings(root)
     bank = read_bank(root, bank_name)
     templates = read_templates(root)
     source_files = [p for p in bank.path.glob('*/*.tex') if p.parent.name.isdigit() and p.stem.isdigit()]
+    task_directories = {p.name for p in bank.path.iterdir() if p.is_dir() and p.name.isdigit()}
+    task_files = {p.relative_to(bank.path).as_posix() for p in source_files}
+    expected_files = {f'{n}/{k}.tex' for n, variants in enumerate(bank.tasks, 1)
+                      for k in range(1, len(variants) + 1)}
+    if task_files != expected_files or task_directories != {str(n) for n in range(1, len(bank.tasks) + 1)}:
+        raise ToolError('Состав заданий изменился во время чтения. Повторите сборку.')
     source_files += [bank.path / image for image in bank.images]
     source_files += [root / 'templates' / name for name in templates]
     source_files += [root / 'config/project.toml']
     source_hashes = {p.relative_to(root).as_posix(): sha256(p) for p in source_files}
+    if read_templates(root) != templates or read_settings(root) != settings:
+        raise ToolError('Шаблоны или настройки изменились во время чтения. Повторите сборку.')
     # Проверить, что прочитанный банк соответствует снимку файлов, а не устарел во время чтения.
     for n, variants in enumerate(bank.tasks, 1):
         for k, text in enumerate(variants, 1):
@@ -143,8 +158,13 @@ def run(
             project.mkdir()
             documents = {}
             archive_name = None
+            pdf_names = ()
+            pdf_archive_name = None
+            compiler_environment = None
             if kind != 'redistribute':
-                documents = render_documents(templates, settings, bank, students, state['records'] if state else None)
+                source_maps = {}
+                documents = render_documents(templates, settings, bank, students, state['records'] if state else None,
+                                             source_maps=source_maps)
                 for name, text in documents.items():
                     (project / name).write_text(text, encoding='utf-8')
                 for image in bank.images:
@@ -168,11 +188,40 @@ def run(
                         if file.is_file():
                             archive.write(file, file.relative_to(project).as_posix())
                 verify_archive(release / archive_name, project)
+                if pdf:
+                    from .compilation import CompilationError, compile_documents
+                    try:
+                        compiler_environment = compile_documents(
+                            root, project, documents, release / 'pdf', release / 'logs',
+                            compiler=compiler, progress=progress, source_maps=source_maps,
+                        )
+                    except CompilationError as exc:
+                        failure_parent = build_parent / bank.name
+                        failure_parent.mkdir(parents=True, exist_ok=True)
+                        failure = failure_parent / reserve_name(failure_parent, version + '-failed')
+                        failure.mkdir()
+                        project.rename(failure / 'sources')
+                        (release / 'logs').rename(failure / 'logs')
+                        write_json(failure / 'error.json', {
+                            'document': exc.document, 'line': exc.line, 'source': exc.source,
+                            'error': str(exc), 'detail': exc.detail, 'hint': exc.hint,
+                        })
+                        exc.directory = failure
+                        raise
+                    pdf_names = tuple(f'pdf/{Path(name).with_suffix(".pdf")}' for name in documents)
+                    pdf_archive_name = version + '-pdf.zip'
+                    with zipfile.ZipFile(release / pdf_archive_name, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+                        for name in pdf_names:
+                            archive.write(release / name, Path(name).name)
+                    verify_archive(release / pdf_archive_name, release / 'pdf')
             flows = dict(sorted(Counter(s.flow for s in students or []).items()))
             if state:
                 write_json(release / 'assignments.json', state)
                 _assignments_csv(release / 'assignments.csv', state['records'], students, len(bank.tasks))
-            if any(sha256(root / name) != value for name, value in source_hashes.items()):
+            current_directories = {p.name for p in bank.path.iterdir() if p.is_dir() and p.name.isdigit()}
+            current_files = {p.relative_to(bank.path).as_posix() for p in bank.path.glob('*/*.tex')
+                             if p.parent.name.isdigit() and p.stem.isdigit()}
+            if current_directories != task_directories or current_files != task_files or any(sha256(root / name) != value for name, value in source_hashes.items()):
                 raise ToolError('Исходники изменились во время сборки. Архив не опубликован; повторите действие.')
             if students is not None and sha256(csv_path) != csv_digest:
                 raise ToolError('CSV студентов изменился во время сборки. Повторите действие.')
@@ -185,6 +234,9 @@ def run(
                 'input_sha256': dict(sorted(source_hashes.items())),
                 'csv_sha256': csv_digest,
                 'archive_sha256': sha256(release / archive_name) if archive_name else None,
+                'pdf_sha256': {name: sha256(release / name) for name in pdf_names},
+                'pdf_archive_sha256': sha256(release / pdf_archive_name) if pdf_archive_name else None,
+                'compiler_environment': compiler_environment,
                 'changes': changes, 'git': _git_info(root),
             }
             write_json(release / 'manifest.json', manifest)
@@ -205,4 +257,6 @@ def run(
                     project.rename(preliminary)
                 except OSError:
                     changes.append('Промежуточная папка не сохранена; готовый ZIP и назначения сохранены.')
-            return Result(final, final / archive_name if archive_name else None, len(students or []), flows, tuple(changes))
+            return Result(final, final / archive_name if archive_name else None, len(students or []), flows,
+                          tuple(changes), tuple(final / name for name in pdf_names),
+                          final / pdf_archive_name if pdf_archive_name else None)

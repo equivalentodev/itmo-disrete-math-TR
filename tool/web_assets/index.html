@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Типовые расчёты</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script type="module" src="/assets/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <strong>Типовые расчёты</strong>
+    <nav class="mode-switch" aria-label="Режим работы">
+      <button id="edit-mode" aria-pressed="true">Редактирование</button>
+      <button id="build-mode" aria-pressed="false">Сборка</button>
+    </nav>
+    <img class="itmo-logo" src="/assets/itmo-logo.png" width="96" height="26" alt="ИТМО">
+  </header>
+  <div id="notice" role="alert" hidden></div>
+  <main id="editing">
+    <aside>
+      <div class="aside-title">Задания</div>
+      <div id="tree" aria-label="Банк заданий"></div>
+    </aside>
+    <section class="workspace" aria-label="Редактор и предпросмотр">
+      <div id="conflict" role="alert" hidden>
+        <span>Файл изменён вне редактора. Ваш текст сохранён в этом окне.</span>
+        <button id="load-external">Загрузить внешнюю версию</button>
+        <button id="keep-local">Сохранить мою версию</button>
+      </div>
+      <div id="panes">
+        <div class="filebar">
+          <div class="file-title">
+            <span id="filename">Файл не выбран</span>
+            <div class="history-actions" role="group" aria-label="История действий">
+              <button id="undo" class="icon-button" type="button" aria-label="Отменить действие" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5 4 10l5 5M4 10h10a6 6 0 0 1 0 12"/></svg></button>
+              <button id="redo" class="icon-button" type="button" aria-label="Повторить действие" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 5 5-5 5m5-5H10a6 6 0 0 0 0 12"/></svg></button>
+            </div>
+          </div>
+          <span id="save-state" role="status"></span>
+          <div class="file-actions">
+            <button id="add-variant" disabled>Добавить вариант</button>
+            <button id="delete-variant" class="icon-button" type="button" aria-label="Удалить вариант" title="Удалить вариант" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg></button>
+          </div>
+        </div>
+        <div id="editor" aria-label="Исходник LaTeX"></div>
+        <div id="splitter" role="separator" aria-label="Ширина редактора" title="Потяните для изменения ширины. С клавиатуры — стрелки влево и вправо." aria-orientation="vertical" aria-valuemin="15" aria-valuemax="80" aria-valuenow="45" tabindex="0"></div>
+        <section id="preview" aria-label="Предпросмотр задания">
+          <p id="preview-state" role="status"></p>
+          <div id="diagnostics" hidden><p id="compile-error" role="alert"></p><details><summary>Журнал компиляции</summary><pre id="compile-log"></pre></details></div>
+          <iframe id="pdf" title="PDF выбранного задания" hidden></iframe>
+          <p id="preview-empty">Откройте вариант, чтобы увидеть его условие.</p>
+        </section>
+      </div>
+    </section>
+  </main>
+  <main id="building" hidden>
+    <section class="build-panel">
+      <h1>Сборка типовика</h1>
+      <label for="bank">Типовик</label><select id="bank"></select>
+      <label class="pdf-choice"><input id="compile-pdf" type="checkbox" checked> Скомпилировать PDF</label>
+      <label for="roster">Список студентов</label>
+      <select id="roster"><option value="">Выберите CSV</option></select>
+      <div id="dropzone">Перетащите CSV сюда или <button id="choose-csv" type="button">выберите файл</button><input id="upload" type="file" accept=".csv,text/csv" hidden></div>
+      <p class="hint">Можно также положить CSV в work/students/. Колонки: ИСУ ID, ФИО, Поток, Группа.</p>
+      <fieldset id="selection-kind"><legend>Кого включить</legend>
+        <label><input type="radio" name="selection" value="all" checked> Всех студентов</label>
+        <label><input type="radio" name="selection" value="flows"> Потоки</label>
+        <label><input type="radio" name="selection" value="groups"> Группы</label>
+      </fieldset>
+      <div id="selection-values" hidden></div>
+      <p id="student-count" role="status">Для именных работ выберите список студентов.</p>
+      <div class="build-actions">
+        <button id="students-build" class="primary" disabled>Собрать работы для студентов</button>
+        <button id="distribute" disabled>Распределить варианты</button>
+      </div>
+      <p class="hint">Именные документы разделены по потокам. Обычная сборка сохраняет назначения.</p>
+      <section class="review-section" aria-labelledby="review-title">
+        <h2 id="review-title">Проверка заданий</h2>
+        <p class="hint">Все варианты выбранного типовика без фамилий. Список студентов не требуется.</p>
+        <button id="review-build">Собрать типовик для проверки</button>
+      </section>
+      <section id="build-result" role="status" hidden></section>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,6 +1,12 @@
 **
 !Dockerfile
-!container_entrypoint.py
+!requirements.txt
+!docker/
+!docker/**
+!frontend/
+!frontend/package.json
+!frontend/package-lock.json
+!frontend/app.js
 !tool/
 !tool/**
 !tests/
@@ -9,3 +15,5 @@
 !templates/**
 **/__pycache__/
 **/*.pyc
+**/node_modules/
+tool/web_assets/app.js

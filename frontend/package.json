@@ -1,0 +1,16 @@
+{
+  "name": "dm-homework-ui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {"build": "esbuild app.js --bundle --minify --format=esm --target=es2022 --outfile=../tool/web_assets/app.js"},
+  "dependencies": {
+    "@codemirror/commands": "6.8.1",
+    "@codemirror/language": "6.11.3",
+    "@codemirror/legacy-modes": "6.5.1",
+    "@codemirror/search": "6.5.11",
+    "@codemirror/state": "6.5.2",
+    "@codemirror/view": "6.38.1"
+  },
+  "devDependencies": {"esbuild": "0.25.10"}
+}

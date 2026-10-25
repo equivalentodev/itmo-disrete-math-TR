@@ -1,10 +1,12 @@
 .DS_Store
 __pycache__/
 *.py[cod]
+/frontend/node_modules/
+/tool/web_assets/app.js
+/.env
 
 # В Git хранится только каркас рабочей области.
 /work/*
-!/work/README.md
 !/work/students/
 /work/students/*
 !/work/students/.gitkeep
